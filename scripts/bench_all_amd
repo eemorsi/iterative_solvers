@@ -1,0 +1,37 @@
+#!/bin/bash
+DATA="Bump_2911 Cube_Coup_dt0 Flan_1565 ML_Geer dielFilterV3real Serena Geo_1438 af_shell10 ldoor Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 bundle_adj CoupCons3D pwtk PR02R bbmat hvdc2 scircuit windtunnel_evap3d hvdc1 StocF-1465 fullb fcondp2 HV15R"
+
+# DATA="scircuit ldoor af_shell10 HV15R Bump_2911 Serena Geo_1438 Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 StocF-1465 CoupCons3D fullb pwtk fcondp2 PR02R  bbmat hvdc2 hvdc1 windtunnel_evap3d"
+#DATA="fullb pwtk fcondp2 PR02R  bbmat hvdc2 hvdc1 windtunnel_evap3d"
+# SOL="6 50 40 12 60 7 61"
+SOL="6"
+for solv in ${SOL}; do
+    for ds in ${DATA}; do 
+        echo "SOLVER=${solv}"
+        line="# NAME=${ds}"
+        sed "/^${line}/s/./ /" job_amd > bench_tmp
+        sed -i "s/#SBATCH --job-name=\"/#SBATCH --job-name=\"${ds}_/g" bench_tmp
+        sed -i "s/SOLVER=.*/SOLVER=${solv}/g" bench_tmp
+        
+        JOBS=$((`squeue -u $USER|wc -l`-1))
+
+        while [ $JOBS -gt 4 ]
+        do
+            sleep 30
+            JOBS=$((`squeue -u $USER|wc -l`-1))
+        done
+        sbatch bench_tmp
+        rm bench_tmp
+    done 
+done
+
+
+SOL="0 1 8 50 61"
+for solv in ${SOL}; do
+    echo "SOLVER=${solv}"
+    line="# NAME=SP10"
+    sed "/^${line}/s/./ /" job_amd > bench_tmp
+    sed -i "s/SOLVER=.*/SOLVER=${solv}/g" bench_tmp
+    sbatch bench_tmp
+    rm bench_tmp
+done

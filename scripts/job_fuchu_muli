@@ -1,0 +1,157 @@
+#!/bin/bash
+#
+#PBS -q a2_20B
+#
+#PBS -N SOLVER
+#
+#PBS --venode=8
+#
+####PBS -T necmpi
+#PBS -T distrib
+
+#
+#PBS -l cpunum_job=2
+#
+#PBS -l elapstim_req=20000
+#
+#PBS -l coresz_prc=0
+#
+####PBS -v MY_NMPI_ROOT=/usr/uhome/aurora/mpc/pub/NECmpi.dir/2.16.0
+####PBS -v NMPI_DAEMON_PATH=${MY_NMPI_ROOT}/libexec/mpid
+#
+#PBS --venum-lhost=8
+#
+#PBS --use-hca=1
+#
+#PBS -j o
+#
+
+
+source /opt/nec/ve/nlc/2.3.0/bin/nlcvars.sh
+source /opt/nec/ve/mpi/2.16.0/bin/necmpivars.sh
+
+cd ${PBS_O_WORKDIR}
+
+
+
+
+function run_one_ve()
+{
+  local DEBUG=0
+  local E_MTX=1
+  local LOG=0
+  local P_LOG=0
+  local PADDING=0
+  local NP=1
+  local NTH=$(expr 8 / $NP)
+
+  local VE=$1
+  local NAME=$2
+  local RHS=$3 
+  local X=$4
+  local SOLVER=$5
+  local queue="a2_20B"
+#   cd ${VE}
+  local out=$( printf "${queue}_solver_%d_${NAME}.log" ${SOLVER} )
+
+
+  local MTX="${HOME}/sim_data/${NAME}/${NAME}.mtx"
+  local MTX_B="${HOME}/sim_data/${NAME}/${NAME}_b.mtx"
+  local MTX_X="${HOME}/sim_data/${NAME}/${NAME}_x.mtx"
+  local POWER="${queue}_${NAME}_sol_${SOLVER}_VE_${VE}.pow"
+  local DIR="/mnt/scatefs_necd/essem/Benchmarks/HYPRE/SpMTXReader"
+  
+  #env
+  
+  #ulimit -a 
+  
+  echo "Dataset: ${NAME}" > ${out} 
+  echo "NThreads: ${NTH}" >> ${out} 
+  
+  echo "CPU INFO:" >> ${out} 
+  lscpu |grep -e "Model name" >> ${out} 
+  lscpu |grep -e "Socket(s):" -e "Core(s) per socket" -e "NUMA node(s):" >> ${out} 
+  
+  local CMD="${DIR}/solver -solver ${SOLVER}  -log ${LOG}  -precond_log ${P_LOG}  -niter 1  -maxit 10000  -tol 1e-16  -emtx ${E_MTX} -mtx ${MTX} -p ${POWER} -id ${VE}"
+  
+  if [[ $PADDING -eq 1 ]]; then
+         CMD+="  -padding"
+  fi
+  if [[ $RHS -eq 1 ]]; then
+         CMD+=" -b ${MTX_B}"
+  fi
+  
+  if [[ $X -eq 1 ]]; then
+         CMD+=" -x ${MTX_X}"
+  fi
+  
+  #export KMP_AFFINITY=verbose,compact
+  
+  export KMP_AFFINITY=granularity=fine,compact
+  export OMP_NUM_THREADS=${NTH}
+  mpirun -np ${NP} -ve ${VE} ${CMD} >> ${out} 2>&1
+
+#   cd ..
+}
+
+SOLVER=7
+# VE=0 NAME=662_bus RHS=0 X=0 ; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=windtunnel_evap2d RHS=1 X=0   ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=sherman3 RHS=0 X=0   ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=raefsky5 RHS=1 X=0 ; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=hvdc1 RHS=1 X=0 ; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=hvdc2 RHS=1 X=0 ; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=sherman5 RHS=1 X=0  ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=airfoil_2d RHS=1 X=0  ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=orsirr_1 RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=pores_2 RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=bbmat RHS=1 X=1 ; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=Bump_2911 RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=Emilia_923 RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=Serena RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=fcondp2 RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=windtunnel_evap3d RHS=1 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=fullb RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=pwtk RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=StocF-1465 RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=Fault_639 RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=lpi_gosh RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=Geo_1438 RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=ML_Laplace RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=PFlow_742 RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=CoupCons3D RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=PR02R RHS=1 X=1; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=RM07R RHS=1 X=1; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=HV15R RHS=1 X=1; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=scircuit RHS=1 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=ldoor RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=af_shell10 RHS=0 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=bundle_adj RHS=1 X=0; ( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=Flan_1565 RHS=0 X=0;( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=Cube_Coup_dt0 RHS=0 X=0;( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=dielFilterV3real RHS=1 X=0;( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+# VE=0 NAME=ML_Geer RHS=0 X=0;( run_one_ve ${VE} ${NAME} ${RHS} ${X} ${SOLVER} ) &
+
+# ( run_one_ve 1 HV15R 1 1 7 ) &
+# ( run_one_ve 1 Geo_1438 0 0 7 ) &
+# ( run_one_ve 2 Serena 0 0 7 ) &
+# ( run_one_ve 3 Bump_2911 0 0 7 ) &
+
+# ( run_one_ve 4 HV15R 1 1 12 ) &
+# ( run_one_ve 5 Geo_1438 0 0 12 ) &
+# ( run_one_ve 6 Serena 0 0 12 ) &
+# ( run_one_ve 7 Bump_2911 0 0 12 ) &
+
+
+# ( run_one_ve 0 hvdc1 1 0 7 ) &
+# ( run_one_ve 1 hvdc1 1 0 7 ) &
+# ( run_one_ve 2 windtunnel_evap3d 1 0 7 ) &
+# ( run_one_ve 3 PR02R 1 1 7 ) &
+
+# ( run_one_ve 4 bbmat 1 1 7 ) &
+# ( run_one_ve 5 fcondp2 0 0 7 ) &
+# ( run_one_ve 6 pwtk 0 0 7 ) &
+# ( run_one_ve 7 fullb 0 0 7 ) &
+
+
+exit 0

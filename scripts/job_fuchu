@@ -1,0 +1,114 @@
+#!/bin/bash
+#
+#PBS -q a1_10AE
+#
+#PBS -N SOLVER
+#
+#PBS --venode=8
+#
+#PBS -T necmpi
+#
+#PBS -l cpunum_job=2
+#
+#PBS -l elapstim_req=7200
+#
+#PBS -l coresz_prc=0
+#
+#PBS -j o
+#
+#PBS -v MY_NMPI_ROOT=/usr/uhome/aurora/mpc/pub/NECmpi.dir/2.16.0
+#PBS -v NMPI_DAEMON_PATH=${MY_NMPI_ROOT}/libexec/mpid
+
+cd ${PBS_O_WORKDIR}
+
+
+source /opt/nec/ve/nlc/2.3.0/bin/nlcvars.sh
+source /opt/nec/ve/mpi/2.16.0/bin/necmpivars.sh
+
+SOLVER=7
+
+DEBUG=0
+E_MTX=1
+
+LOG=0
+P_LOG=0
+PADDING=0
+NP=1
+NTH=$(expr 8 / $NP)
+VE=0
+
+
+# NAME=662_bus RHS=0 X=0 
+# NAME=windtunnel_evap2d RHS=1 X=0  #rhs
+# NAME=sherman3 RHS=0 X=0  #rhs
+# NAME=raefsky5 RHS=1 X=0 #rhs -> not solvable with ilu
+# NAME=hvdc1 RHS=1 X=0 #hrs
+# NAME=hvdc2 RHS=1 X=0 #hrs
+# NAME=sherman5 RHS=1 X=0 #rhs
+# NAME=airfoil_2d RHS=1 X=0 #rhs
+# NAME=orsirr_1 RHS=0 X=0
+# NAME=pores_2 RHS=0 X=0
+# NAME=bbmat RHS=1 X=1 # contain rhs and sol
+# NAME=Bump_2911 RHS=0 X=0
+# NAME=Emilia_923 RHS=0 X=0
+# NAME=Serena RHS=0 X=0
+# NAME=fcondp2 RHS=0 X=0
+# NAME=windtunnel_evap3d RHS=1 X=0
+# NAME=fullb RHS=0 X=0
+# NAME=pwtk RHS=0 X=0
+# NAME=StocF-1465 RHS=0 X=0
+# NAME=Fault_639 RHS=0 X=0
+# NAME=lpi_gosh RHS=0 X=0
+# NAME=Geo_1438 RHS=0 X=0
+# NAME=ML_Laplace RHS=0 X=0
+# NAME=PFlow_742 RHS=0 X=0
+# NAME=CoupCons3D RHS=0 X=0
+# NAME=PR02R RHS=1 X=1
+# NAME=RM07R RHS=1 X=1
+# NAME=HV15R RHS=1 X=1
+# NAME=scircuit RHS=1 X=0
+# NAME=ldoor RHS=0 X=0
+# NAME=af_shell10 RHS=0 X=0
+# NAME=bundle_adj RHS=1 X=0
+# NAME=Flan_1565 RHS=0 X=0;
+# NAME=Cube_Coup_dt0 RHS=0 X=0;
+# NAME=dielFilterV3real RHS=1 X=0;
+# NAME=ML_Geer RHS=0 X=0;
+
+MTX="${HOME}/sim_data/${NAME}/${NAME}.mtx"
+MTX_B="${HOME}/sim_data/${NAME}/${NAME}_b.mtx"
+MTX_X="${HOME}/sim_data/${NAME}/${NAME}_x.mtx"
+
+DIR="${HOME}/git/SpMTXReader"
+
+#env
+
+#ulimit -a 
+
+echo "Dataset: ${NAME}"
+echo "NThreads: ${NTH}"
+
+echo "CPU INFO:"
+lscpu |grep -e "Model name"
+lscpu |grep -e "Socket(s):" -e "Core(s) per socket" -e "NUMA node(s):"
+
+CMD="${DIR}/solver -solver ${SOLVER}  -log ${LOG}  -precond_log ${P_LOG}  -niter 1  -maxit 10000  -tol 1e-16  -emtx ${E_MTX} -mtx ${MTX}"
+
+if [[ $PADDING -eq 1 ]]; then
+       CMD+="  -padding"
+fi
+if [[ $RHS -eq 1 ]]; then
+       CMD+=" -b ${MTX_B}"
+fi
+
+if [[ $X -eq 1 ]]; then
+       CMD+=" -x ${MTX_X}"
+fi
+
+#export KMP_AFFINITY=verbose,compact
+
+export KMP_AFFINITY=granularity=fine,compact
+export OMP_NUM_THREADS=${NTH}
+mpirun -ve ${VE} -np ${NP} ${CMD}
+
+exit 0

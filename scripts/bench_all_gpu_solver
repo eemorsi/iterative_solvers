@@ -1,0 +1,12 @@
+#!/bin/bash
+
+DATA="scircuit ldoor af_shell10 HV15R Bump_2911 Serena Geo_1438 Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 StocF-1465 CoupCons3D fullb pwtk fcondp2 PR02R  bbmat hvdc2 hvdc1 windtunnel_evap3d"
+#DATA="fullb pwtk fcondp2 PR02R  bbmat hvdc2 hvdc1 windtunnel_evap3d"
+
+for ds in $DATA; do 
+    line="# NAME=$ds"
+    sed "/^$line/s/./ /" job_gpu > bench_tmp
+    sed -i "s/#SBATCH --job-name=\"/#SBATCH --job-name=\"${ds}_/g" bench_tmp
+    sbatch bench_tmp
+    rm bench_tmp
+done 

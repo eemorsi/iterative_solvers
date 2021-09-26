@@ -1,0 +1,59 @@
+#!/bin/bash
+
+DATA="Bump_2911 Cube_Coup_dt0 Flan_1565 ML_Geer dielFilterV3real Serena Geo_1438 af_shell10 ldoor Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 bundle_adj CoupCons3D pwtk PR02R bbmat hvdc2 scircuit windtunnel_evap3d hvdc1 StocF-1465 fullb fcondp2 HV15R"
+# DATA="scircuit ldoor af_shell10 bundle_adj HV15R  Bump_2911 Serena Geo_1438 Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 StocF-1465 CoupCons3D fullb pwtk fcondp2 PR02R  bbmat hvdc2 hvdc1 windtunnel_evap3d "
+DATA="Flan_1565"
+
+DARR=($DATA)
+LENGTH="${#DARR[@]}"
+
+
+# SOL="6 50 40 12 60 7 61"
+SOL="7 61"
+for solv in ${SOL}; do
+    i=0
+    while [[ $i -le $LENGTH ]]
+    do
+        ((v = 30 + $RANDOM % 10 ))
+        ((diff = DS - i))
+        end=7
+        # if [[ $diff -lt $end ]]
+        # then
+        #   end=$diff
+        # fi
+
+        # end=$((diff < end ? diff : 7))
+        # echo $end
+        cp job_fuchu_muli "bench_tmp_$v"
+        for ii in $( seq 0 $end ); do
+    
+            ds="${DARR[$((ii+i))]}"
+            if [ ! -z "$ds" ]
+            then
+            line="# VE=0 NAME=$ds"
+            nline="VE=$ii NAME=$ds"
+            sed -i -e "s/$line/$nline/g" "bench_tmp_$v"
+            fi
+        done
+        sed -i "s/SOLVER=.*/SOLVER=${solv}/g" "bench_tmp_$v"
+        JOBS=`/opt/nec/nqsv/bin/qstat -Ps|grep essem|wc -l`
+        while [ $JOBS -ge 2 ]
+        do
+            sleep 30
+            JOBS=`/opt/nec/nqsv/bin/qstat -Ps|grep essem|wc -l`
+        done
+        /opt/nec/nqsv/bin/qsub "bench_tmp_$v"
+        rm "bench_tmp_$v"
+        ((i = i + 8))
+    done
+done
+
+
+# for ds in $DATA; do 
+#     line="# VE=0 NAME=$ds"
+#     nline="VE=$ii NAME=$ds""
+#     sed "/^$line/$nline /" job_fuchu_mutli > bench_tmp
+#     sed -i "s/#PBS -N SOLVER\"/#PBS -N SOLVER_\"${ds}_/g" bench_tmp
+#     /opt/nec/nqsv/bin/qsub bench_tmp
+#     rm bench_tmp
+# done 

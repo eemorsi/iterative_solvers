@@ -1,0 +1,46 @@
+# mpinfort  -Dalign_size=128 -fopenmp -O3 -I/home/nec/emorsi/git/HYPRE/build_nftrace/include ex5big.c mmio.c mytimer.c utils.c sparse_matrix.c -o solver -L/home/nec/emorsi/git/HYPRE/build_nftrace/lib -lHYPRE -L/opt/nec/ve/nlc/2.1.0/lib/ -lblas_openmp -lsblas_openmp -L/opt/nec/ve/nlc/2.1.0/lib/ -llapack
+
+CC          = mpicc
+FC          = mpifort
+
+CFLAGS      = -O3 -std=c99 -Wall -fopenmp -Dalign_size=64 -march=core-avx2  
+
+INC			= -I${HOME}/HYPRE/build_x86/include 
+HYPRE		=  
+
+
+DEBUG	?=0
+ifeq ($(DEBUG), 1)
+CFLAGS	+=	-g 
+endif
+
+#BLAS		= -L${MKLROOT}/lib/intel64_lin -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -pthread -lm 
+#MPI			= -L/usr/mpi/gcc/openmpi-4.0.2rc3/lib64 
+LIBS		= -lm -lstdc++
+INC			+= -I/usr/local/cuda-11.2/include 
+LIBS		+= -L/usr/local/cuda-11.2/lib64 -lcuda -lcudart -lcudadevrt -lcusparse 
+LIBS		+= -L${HOME}/HYPRE/build_x86/lib -lHYPRE
+
+COM_SRCS := mmio.c sparse_matrix.c
+MPI_SRCS := solvers.c ${COM_SRCS}
+OMP_SRCS := solvers_omp.c ${COM_SRCS}
+MPI_OBJS := $(MPI_SRCS:%.c=%.o)
+OMP_OBJS := $(OMP_SRCS:%.c=%.o)
+
+BUILD_DIR	= $(shell pwd)/..
+
+.PHONY = all clean
+all: solver_x86
+
+solver_omp:	$(OMP_OBJS)
+	${CC} ${CFLAGS} ${INC} $^ -o $@ ${LIBS}
+
+solver_x86:	$(MPI_OBJS)
+	${CC} ${INC}  $^ -o ${BUILD_DIR}/$@ ${LIBS}
+
+%.o: %.c
+	${CC} ${CFLAGS} ${INC} -c $<
+
+clean:
+	rm -rvf *.o ${BUILD_DIR}/solver_x86 ${BUILD_DIR}/solver_omp
+	

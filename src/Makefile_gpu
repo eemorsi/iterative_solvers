@@ -1,0 +1,54 @@
+
+CC          = mpicc
+NVC			= /usr/local/cuda-11.2/bin/nvcc
+FC          = mpifort
+
+CFLAGS      = -O3 -Wall -fopenmp -Dalign_size=64  
+
+INC			= -I${HOME}/HYPRE/build_gpu/include 
+HYPRE		=  
+
+
+DEBUG	?=0
+ifeq ($(DEBUG), 1)
+CFLAGS	+=	-g 
+endif
+POWER	?=0
+
+ifeq ($(POWER), 1)
+CFLAGS      += -D__POWER=1
+endif
+
+#BLAS		= -L${MKLROOT}/lib/intel64_lin -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -pthread -lm 
+#MPI			= -L/usr/mpi/gcc/openmpi-4.0.2rc3/lib64 
+LIBS		= -lm -lstdc++
+INC			+= -I${nvcommdir}/openmpi/openmpi-3.1.5/include
+LIBS		+= -L/usr/local/cuda-11.2/lib64 -lcuda -lcudart -lcudadevrt -lcusparse -lcurand
+LIBS		+= -L${nvcommdir}/openmpi/openmpi-3.1.5/lib -lmpi
+LIBS		+= -L${nvcompdir}/lib -lnvomp  -lnvToolsExt -ldl -lnvhpcatm -lpthread -lnvcpumath -lnsnvc -lnvc -lm -lgcc -lc -lgcc -lgcc_s
+#LIBS		+= -L/usr/local/cuda-11/lib64 -lcuda -lcudart -lcudadevrt -lcusparse 
+LIBS		+= -L${HOME}/HYPRE/build_gpu/lib -lHYPRE
+
+COM_SRCS := mmio.c sparse_matrix.c
+MPI_SRCS := solvers.c ${COM_SRCS}
+OMP_SRCS := solvers_omp.c ${COM_SRCS}
+MPI_OBJS := $(MPI_SRCS:%.c=%.o)
+OMP_OBJS := $(OMP_SRCS:%.c=%.o)
+
+BUILD_DIR	= $(shell pwd)/..
+
+.PHONY = all clean
+all: solver_gpu
+
+solver_omp:	$(OMP_OBJS)
+	${CC} ${CFLAGS} ${INC} $^ -o $@ ${LIBS}
+
+solver_gpu:	$(MPI_OBJS)
+	${NVC} -arch=sm_70 ${INC}  $^ -o ${BUILD_DIR}/$@ ${LIBS}
+
+%.o: %.c
+	${CC} ${CFLAGS} ${INC} -c $<
+
+clean:
+	rm -rvf *.o ${BUILD_DIR}/solver_gpu ${BUILD_DIR}/solver_omp
+	

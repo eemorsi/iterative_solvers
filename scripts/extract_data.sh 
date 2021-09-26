@@ -1,0 +1,28 @@
+#!/bin/bash
+
+DATA="HV15R Bump_2911 Serena Geo_1438 Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 StocF-1465 CoupCons3D fullb pwtk fcondp2 PR02R  bbmat hvdc2 hvdc1 windtunnel_evap3d"
+#DATA="fullb pwtk fcondp2 PR02R  bbmat hvdc2 hvdc1 windtunnel_evap3d"
+PATH="/mnt/scatefs_necd/essem/sim_data"
+pushd ${PATH}
+
+# for ds in $DATA; do 
+#     file="${ds}.tar.gz"
+#     ls -sh ${file}
+#     # tar -xf  ${file}
+# done 
+
+
+
+NOTEXIST=""
+for DIR in $DATA; do 
+if [ ! -d "$DIR" ]; then
+  echo "Error: ${DIR} not found. extract it ... ."
+  FILE="$DIR.tar.gz"
+  NOTEXIST+=" $DIR.tar.gz"
+#   sh /mnt/scatefs_necd/essem/XFER/get_from_cloud.sh  ${FILE}
+#   tar -xf FILE
+fi
+done
+
+popd
+

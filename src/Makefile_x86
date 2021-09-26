@@ -1,0 +1,39 @@
+CC          = mpicc
+FC          = mpifort
+
+CFLAGS      = -O3 -std=c99 -Wall -fopenmp -Dalign_size=64 -march=core-avx2
+
+INC                     = -I${HOME}/HYPRE/build_amd/include
+HYPRE           = -L${HOME}/HYPRE/build_amd/lib -lHYPRE
+
+
+DEBUG   ?=0
+ifeq ($(DEBUG), 1)
+CFLAGS  +=      -g
+endif
+
+BLAS            = -L${MKLROOT}/lib/intel64_lin -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -pthread -lm
+LIBS            = -lm ${HYPRE} ${BLAS}
+
+COM_SRCS := mmio.c sparse_matrix.c
+MPI_SRCS := solvers.c ${COM_SRCS}
+OMP_SRCS := solvers_omp.c ${COM_SRCS}
+MPI_OBJS := $(MPI_SRCS:%.c=%.o)
+OMP_OBJS := $(OMP_SRCS:%.c=%.o)
+
+BUILD_DIR       = $(shell pwd)/..
+
+.PHONY = all clean
+all: solver_amd
+
+solver_omp:     $(OMP_OBJS)
+	${CC} ${CFLAGS} ${INC} $^ -o $@ ${LIBS}
+
+solver_amd:     $(MPI_OBJS)
+	${CC} ${CFLAGS} ${INC} $^ -o ${BUILD_DIR}/$@ ${LIBS}
+
+%.o: %.c
+	${CC} ${CFLAGS} ${INC} -c $< -lt
+
+clean:
+	rm -rvf *.o ${BUILD_DIR}/solver_amd ${BUILD_DIR}/solver_omp
