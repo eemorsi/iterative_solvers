@@ -11,10 +11,10 @@ export NMPI_F90=/opt/nec/ve/nfort/3.2.0/bin/nfort
 export NMPI_CC=/opt/nec/ve/ncc/3.2.0/bin/ncc
 export NMPI_CXX=/opt/nec/ve/ncc/3.2.0/bin/nc++
 
-SOLVER_ROOT=${HOME}/git/HYPRE/SpMTXReader
+SOLVER_ROOT=${HOME}/git/HYPRE/iterative_solvers
 pushd ${SOLVER_ROOT}/src
 
 make clean
-make FTRACE=0 DEBUG=0 POWER=0
+make FTRACE=0 DEBUG=0 POWER=1
 
 popd

@@ -1,15 +1,4 @@
 
-
-/*
-   Interface:    Linear-Algebraic (IJ)
-
-   Compile with: make
-
-   Sample run:   mpirun -ve 0-1 -np 4 ./solver -print_system -solver 0 -mtx
-   ~/A_1024/A_1024.mtx -b ~/A_1024/A_1024_b.mtx
-
-   Description:
-*/
 #include "HYPRE.h"
 #include "HYPRE_krylov.h"
 #include "HYPRE_parcsr_ls.h"
@@ -22,95 +11,15 @@
 #ifdef __ve__
 #include <time.h>
 #endif
+#include "cpower.h"
 
-#ifdef __POWER
-#include <errno.h>
-#include <signal.h>
-#include <string.h>
-#include <sys/prctl.h>
-
-#define READ 0
-#define WRITE 1
-
-FILE *c_popen(char *command, char type, pid_t *pid) {
-  pid_t child_pid;
-  int fd[2];
-  pipe(fd);
-
-  if ((child_pid = fork()) == -1) {
-    perror("fork");
-    exit(1);
-  }
-
-  /* child process */
-  if (child_pid == 0) {
-    if (type == 'r') {
-      close(fd[0]);   // Close the READ end of the pipe since the child's fd is
-                      // write-only
-      dup2(fd[1], 1); // Redirect stdout to pipe
-    } else {
-      close(fd[1]);   // Close the WRITE end of the pipe since the child's fd is
-                      // read-only
-      dup2(fd[0], 0); // Redirect stdin to pipe
-    }
-
-    // int r = prctl(PR_SET_PDEATHSIG, SIGKILL);
-    // if (r == -1) { perror(0); exit(1); }
-    // printf("child pid %d\n", child_pid);
-    setpgid(child_pid,
-            child_pid); // Needed so negative PIDs can kill children of /bin/sh
-    execl("/bin/sh", "sh", "-c", command, (char *)0);
-    // system(command);
-    // execv(command, (char *)0);
-
-    exit(0);
-  } else {
-
-    printf("child pid %d\n", child_pid);
-
-    if (type == 'r') {
-      close(fd[1]); // Close the WRITE end of the pipe since parent's fd is
-                    // read-only
-    } else {
-      close(fd[0]); // Close the READ end of the pipe since parent's fd is
-                    // write-only
-    }
-  }
-
-  *pid = child_pid;
-
-  if (type == 'r') {
-    return fdopen(fd[0], "r");
-  }
-
-  return fdopen(fd[1], "w");
-}
-
-int c_pclose(FILE *fp, pid_t pid) {
-  int stat;
-  char cmd[1000];
-
-  sprintf(cmd, "kill -9 %d", pid);
-  // execl("/bin/sh", "sh", "-c", cmd, (char *)0);
-  system(cmd);
-  // prctl(PR_SET_PDEATHSIG, SIGTERM);
-  fclose(fp);
-  // while (waitpid(pid, &stat, 0) == -1) {
-  //   if (errno != EINTR) {
-  //     stat = -1;
-  //     break;
-  //   }
-  // }
-
-  return stat;
-}
-#endif
 int hypre_ModifyPCAMG_Func(void *precond_data, int iterations,
                            double rel_residual_norm);
 
 #define my_min(a, b) (((a) < (b)) ? (a) : (b))
 
 int main(int argc, char *argv[]) {
+  
   HYPRE_Int i;
   int myid, num_procs;
   size_t n;
@@ -281,48 +190,11 @@ int main(int argc, char *argv[]) {
   if (myid == 0) {
 
 #ifdef __POWER
-#ifdef __ve__
-    sprintf(bash_cmd,
-            "J=`ps -p %d|grep %d|wc -l`;while [ $J -ne 0 ]; do "
-            "/opt/nec/ve/bin/vecmd -N %d info | egrep ^Current -A2 | grep -v "
-            "Current | awk '{sum=sum + 12 * $5 / 1000}END{print sum}' >> %s; "
-            "J=`ps -p %d|grep %d|wc -l`;"
-            "sleep 1 ; done &",
-            ppid, ppid, comp_id, pow_filepath, ppid, ppid);
-#else
-    // --loop-ms=1000
-    sprintf(bash_cmd,
-            "J=`ps -p %d|grep %d|wc -l`;while [ $J -ne 0 ]; do "
-            "nvidia-smi -i %d --format=csv --query-gpu=power.draw|cut -d\" \" "
-            "-f 1|sort -rn|sed 2d >> %s; "
-            "J=`ps -p %d|grep %d|wc -l`;"
-            "sleep 1 ; done &",
-            ppid, ppid, comp_id, pow_filepath, ppid, ppid);
-#endif
-    printf("%s\n", bash_cmd);
+    get_bash_cmd(&bash_cmd, pow_filepath, ppid, comp_id);
 #endif
     // SparseMatrixCOO coo_matrix;
     fast_load_from_mtx_file(mtx_filepath, &t_coo_matrix);
 
-    // if (mtx_ext > 1)
-    // {
-    //    SparseMatrixCOO e_coo_matrix;
-
-    //    extend_sparse_coo(&t_coo_matrix, &e_coo_matrix, mtx_ext, 1);
-    //    if (padding == 1)
-    //       sort_coo_row_padding(&e_coo_matrix, &coo_matrix);
-    //    else
-    //       sort_coo_row(&e_coo_matrix, &coo_matrix);
-    //    free(e_coo_matrix.values);
-    //    free(e_coo_matrix.rows);
-    //    free(e_coo_matrix.columns);
-    // }
-    // else
-    // {
-
-    //    if (padding == 1)
-    //       sort_coo_row_padding(&t_coo_matrix, &coo_matrix);
-    //    else
     sort_coo_row(&t_coo_matrix, &coo_matrix);
 
     free(t_coo_matrix.values);
@@ -339,30 +211,6 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Finish reading and sorting of COO data\n");
 
-    // else
-    // {
-    //    rhs_flag = 1;
-    //    // fill rhs with randoms
-    //    rhs = (double *)calloc(coo_matrix.ncolumns, sizeof(double));
-
-    //    asl_random_t rng;
-    //    /* Library Initialization */
-    //    asl_library_initialize();
-    //    /* Generator Preparation */
-    //    asl_random_create(&rng, ASL_RANDOMMETHOD_MT19937_64);
-    //    asl_random_distribute_normal(rng, 1.0, 0.5);
-
-    //    asl_random_generate_d(rng, coo_matrix.ncolumns, rhs);
-
-    //    /* Generator Finalization */
-    //    asl_random_destroy(rng);
-    //    /* Library Finalization */
-    //    asl_library_finalize();
-    // }
-
-    // printf("nrows %d, ncol %d \t nrows %d, ncol %d\n", t_coo_matrix.nrows,
-    // t_coo_matrix.ncolumns, coo_matrix.nrows, coo_matrix.ncolumns);
-    // printf("nnz %d\t  %d\n", t_coo_matrix.nnz, coo_matrix.nnz);
 
     size_t local_chunk = coo_matrix.nnz / num_procs;
 
@@ -386,8 +234,6 @@ int main(int argc, char *argv[]) {
   // MPI_Bcast(local_nnz, num_procs, MPI_INT, 0, MPI_COMM_WORLD);
 
   MPI_Bcast(&coo_matrix.nnz, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  // MPI_Bcast(&rhs_flag, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  // MPI_Bcast(&x_flag, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
   MPI_Bcast(&coo_matrix.nrows, 1, MPI_INT, 0, MPI_COMM_WORLD);
   MPI_Bcast(&coo_matrix.ncolumns, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -414,11 +260,6 @@ int main(int argc, char *argv[]) {
   if (x_flag == 1) {
     MPI_Bcast(x_sol_vals, coo_matrix.ncolumns, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   }
-  // if (rhs_flag == 1)
-  //    fast_load_from_array_file(mtx_b_filepath, &rhs, mtx_ext);
-
-  // if (x_flag == 1)
-  //    fast_load_from_array_file(mtx_x_filepath, &x_sol_vals, mtx_ext);
 
   MPI_Bcast(coo_matrix.values, coo_matrix.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast(coo_matrix.columns, coo_matrix.nnz, MPI_INT, 0, MPI_COMM_WORLD);
@@ -426,44 +267,6 @@ int main(int argc, char *argv[]) {
 
   n = coo_matrix.nrows;
   nnz = coo_matrix.nnz;
-
-  // printf("%d\t --> %d\t %d\t %f\n", myid, coo_matrix.rows[rowindx[myid]],
-  // coo_matrix.columns[rowindx[myid]], coo_matrix.values[rowindx[myid]]);
-
-  // MPI_Finalize();
-  //    return (0);
-
-  // if (myid != 0)
-  // {
-  //    for (i = 0; i < coo_matrix.ncolumns; i++)
-  //    {
-  //       printf("%lg\t%lg\n", rhs[i], x_sol_vals[i]);
-  //    }
-  // }
-
-  // MPI_Finalize();
-  // return (0);
-
-  /* Preliminaries: want at least one processor per row */
-  // if (n * n < num_procs)
-  //    n = sqrt(num_procs) + 1;
-
-  // N = coo_matrix.nrows; /* global number of rows */
-  // h = 1.0 / (n + 1);    /* mesh size*/
-  // h2 = h * h;
-
-  /* Each processor knows only of its own rows - the range is denoted by ilower
-     and upper.  Here we partition the rows. We account for the fact that
-     N may not divide evenly by the number of processors. */
-  // local_size = N / num_procs;
-  // extra = N - local_size * num_procs;
-
-  // ilower = local_size * myid;
-  // ilower += my_min(myid, extra);
-
-  // iupper = local_size * (myid + 1);
-  // iupper += my_min(myid + 1, extra);
-  // iupper = iupper - 1;
 
   ilower[0] = 0;
   if (myid != 0)
@@ -475,19 +278,10 @@ int main(int argc, char *argv[]) {
 
   iupper[1] = coo_matrix.ncolumns - 1;
 
-  // printf("%d\t %d, %d \t %d\n", myid, ilower[0], iupper[0], rowindx[myid]);
-
-  // printf("The number of cols %d, %d\n", illower[1], iupper[1]  );
 
   /* How many rows do I have? */
   local_size = iupper[0] - ilower[0] + 1;
 
-// printf("%d\t%d -> %d  @ %d\n", myid, ilower[0], iupper[0],
-// coo_matrix.rows[ilower[0]]);
-
-/* Create the matrix. */
-// printf("%d -> %d, %d, %d, %d\n", myid, ilower[0], iupper[0], ilower[1],
-// iupper[1]);
 #ifdef __ve__
   struct timespec t_strt, t_end;
 
