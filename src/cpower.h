@@ -8,6 +8,8 @@
 #define READ 0
 #define WRITE 1
 
+int comp_elem;
+
 FILE *c_popen(char *command, char type, pid_t *pid) {
   pid_t child_pid;
   int fd[2];
@@ -81,8 +83,8 @@ int c_pclose(FILE *fp, pid_t pid) {
   return stat;
 }
 
-void get_bash_cmd(char **cmd, char *pow_filepath, int ppid, int comp_id) {
-#ifdef __POWER
+void get_bash_cmd(char **cmd, char *pow_filepath, int comp_id) {
+   pid_t ppid = getpid();
 #ifdef __ve__
   // sprintf(bash_cmd,
   //         "J=`ps -p %d|grep %d|wc -l`;while [ $J -ne 0 ]; do "
@@ -112,6 +114,5 @@ void get_bash_cmd(char **cmd, char *pow_filepath, int ppid, int comp_id) {
           ppid, ppid, comp_id, pow_filepath, ppid, ppid);
 #endif
   printf("%s\n", cmd);
-#endif
 }
 #endif

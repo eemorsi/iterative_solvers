@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 #ifdef __POWER
 
   char bash_cmd[2000]; // BASH_C("rr.power", 0);
-  pid_t ppid = getpid();
+ 
 
   char type = 'r';
   FILE *pipe;
@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
   if (myid == 0) {
 
 #ifdef __POWER
-    get_bash_cmd(&bash_cmd, pow_filepath, ppid, comp_id);
+    get_bash_cmd(&bash_cmd, pow_filepath, comp_id);
 #endif
     // SparseMatrixCOO coo_matrix;
     fast_load_from_mtx_file(mtx_filepath, &t_coo_matrix);
