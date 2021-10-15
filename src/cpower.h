@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <string.h>
 #include <sys/prctl.h>
+#include <unistd.h>
 
 #define READ 0
 #define WRITE 1
