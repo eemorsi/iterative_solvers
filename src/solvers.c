@@ -19,7 +19,7 @@ int hypre_ModifyPCAMG_Func(void *precond_data, int iterations,
 #define my_min(a, b) (((a) < (b)) ? (a) : (b))
 
 int main(int argc, char *argv[]) {
-  
+
   HYPRE_Int i;
   int myid, num_procs;
   size_t n;
@@ -43,8 +43,7 @@ int main(int argc, char *argv[]) {
   // double h, h2;
 #ifdef __POWER
 
-  char bash_cmd[2000]; // BASH_C("rr.power", 0);
- 
+  char *bash_cmd; // BASH_C("rr.power", 0);
 
   char type = 'r';
   FILE *pipe;
@@ -119,6 +118,7 @@ int main(int argc, char *argv[]) {
       } else if (strcmp(argv[arg_index], "-id") == 0) {
         arg_index++;
         comp_id = atoi(argv[arg_index++]);
+
       } else if (strcmp(argv[arg_index], "-precond_log") == 0) {
         arg_index++;
         precond_log = atoi(argv[arg_index++]);
@@ -211,7 +211,6 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Finish reading and sorting of COO data\n");
 
-
     size_t local_chunk = coo_matrix.nnz / num_procs;
 
     size_t tmp, chunk = local_chunk;
@@ -277,7 +276,6 @@ int main(int argc, char *argv[]) {
   iupper[0] = coo_matrix.rows[rowindx[myid] - 1];
 
   iupper[1] = coo_matrix.ncolumns - 1;
-
 
   /* How many rows do I have? */
   local_size = iupper[0] - ilower[0] + 1;

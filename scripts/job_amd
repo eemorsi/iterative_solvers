@@ -10,11 +10,13 @@
 #
 #SBATCH --partition=amd
 #
-#SBATCH --constraint=amd7642&mhz-2300
+#SBATCH --constraint=amd7543&mhz-2800
+###SBATCH --constraint=amd7642&mhz-2300
 #
-#source ${HOME}/nec_hpc_tools/env/mpi/openmpi-4.1.0/linux-x64-intel2020.2/env.sh
-# source ${HOME}/nec_hpc_tools/env/mpi/hpcx-2.7.0/linux-x64-intel2018.3/env.sh
+
+
 source /home/blodej/nec_hpc_tools/env/mpi/hpcx-2.9.0/linux-x64-intel2021.3/env.sh
+
 export LD_LIBRARY_PATH=${HOME}/HYPRE/build_amd/lib:${LD_LIBRARY_PATH}
 
 SOLVER=12
@@ -25,9 +27,7 @@ E_MTX=1
 LOG=0
 P_LOG=0
 PADDING=0
-NP=2
-NTH=$(expr 96 / $NP)
-VE=0
+
 
 # NAME=662_bus RHS=0 X=0 
 # NAME=windtunnel_evap2d RHS=1 X=0  #rhs
@@ -96,11 +96,14 @@ if [[ $X -eq 1 ]]; then
        CMD+=" -x ${MTX_X}"
 fi
 
-#export KMP_AFFINITY=verbose,compact
+export OMP_DISPLAY_ENV=true
+export OMP_DISPLAY_AFFINITY=true
 
-export KMP_AFFINITY=granularity=fine,compact
-export OMP_NUM_THREADS=${NTH}
-PPN=${NP}
-mpirun -np ${NP} --map-by ppr:${PPN}:node:pe=${NTH}  ${CMD}
+export OMP_NUM_THREADS=8
+mpirun -report-bindings --map-by ppr:2:node:pe=32 -x OMP_PROC_BIND=spread   ${CMD}
+export OMP_NUM_THREADS=16
+mpirun -report-bindings --map-by ppr:2:node:pe=32 -x OMP_PROC_BIND=spread   ${CMD}
+export OMP_NUM_THREADS=32
+mpirun -report-bindings --map-by ppr:2:node:pe=32 -x OMP_PROC_BIND=spread   ${CMD}
 
 exit 0

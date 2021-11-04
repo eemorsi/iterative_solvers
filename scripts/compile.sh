@@ -15,6 +15,6 @@ SOLVER_ROOT=${HOME}/git/HYPRE/iterative_solvers
 pushd ${SOLVER_ROOT}/src
 
 make clean
-make FTRACE=0 DEBUG=0 POWER=1
+make FTRACE=0 DEBUG=1 POWER=1
 
 popd

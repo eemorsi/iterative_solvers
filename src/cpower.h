@@ -4,7 +4,7 @@
 #include <signal.h>
 #include <string.h>
 #include <sys/prctl.h>
-#include <unistd.h>
+// #include <unistd.h>
 
 #define READ 0
 #define WRITE 1
@@ -84,9 +84,24 @@ int c_pclose(FILE *fp, pid_t pid) {
   return stat;
 }
 
-void get_bash_cmd(char **cmd, char *pow_filepath, int comp_id) {
-   pid_t ppid = getpid();
+void get_bash_cmd(char **cmd, const char *pow_filepath, int comp_id) {
+        pid_t ppid = getpid();
+        *cmd =(char *)malloc(sizeof(char)*2000);
+
+        
+        // fprintf(stderr, "dev_ve %d\n", comp_id);
+
 #ifdef __ve__
+        char dev_veslot[32];
+        char dev_ve[32];
+        sprintf(dev_veslot, "/dev/veslot%d", comp_id);
+        // fprintf(stderr, "dev_veslot %s\n", dev_veslot);
+        if (readlink(dev_veslot, dev_ve, 32) == -1) {
+          fprintf(stderr, "readlink failed\n");
+          return;
+        }
+
+        comp_id = (int)(dev_ve[2] - '0');
   // sprintf(bash_cmd,
   //         "J=`ps -p %d|grep %d|wc -l`;while [ $J -ne 0 ]; do "
   //         "/opt/nec/ve/bin/vecmd -N %d info | egrep ^Current -A2 | grep -v

@@ -38,7 +38,7 @@ export PATH=/usr/local/cuda/cuda-11.2/bin:$PATH
 
 mpicc --version 
 
-SOLVER_ROOT=${HOME}/HYPRE/SpMTXReader
+SOLVER_ROOT=${HOME}/HYPRE/iterative_solvers
 pushd ${SOLVER_ROOT}/src
 
 make -f Makefile_gpu clean

@@ -12,7 +12,7 @@ source /home/blodej/nec_hpc_tools/env/mpi/hpcx-2.9.0/linux-x64-intel2021.3/env.s
 HYPRE_ROOT=${HOME}/HYPRE/hypre_x86
 
 DEBUG=0
-ICX=0
+ICX=1
 
 PREFIX=${HOME}/HYPRE/build_amd
 CC_EXTRAFLAGS=" -march=core-avx2"
@@ -33,7 +33,7 @@ then
 
 fi
 
-
+rm -rf ${PREFIX}
 pushd ${HYPRE_ROOT}/src
 
 make clean
@@ -57,4 +57,3 @@ make -j
 make install
 
 popd
-
