@@ -8,9 +8,9 @@
 #
 
 source /opt/nec/ve/nlc/2.3.0/bin/nlcvars.sh
-source /opt/nec/ve/mpi/2.16.0/bin/necmpivars.sh
+source /opt/nec/ve/mpi/2.18.0/bin/necmpivars.sh
 
-SOLVER=7
+SOLVER=12
 
 DEBUG=0
 E_MTX=1
@@ -19,7 +19,7 @@ LOG=0
 P_LOG=0
 PADDING=0
 NP=1
-NTH=$(expr 8 / $NP)
+NTH=8
 VE=0
 
 
@@ -52,7 +52,7 @@ VE=0
 # NAME=RM07R RHS=1 X=1
 # NAME=HV15R RHS=1 X=1
 # NAME=scircuit RHS=1 X=0
-# NAME=ldoor RHS=0 X=0
+ NAME=ldoor RHS=0 X=0
 # NAME=af_shell10 RHS=0 X=0
 # NAME=bundle_adj RHS=1 X=0
 # NAME=Flan_1565 RHS=0 X=0;
@@ -64,7 +64,7 @@ MTX="${HOME}/sim_data/${NAME}/${NAME}.mtx"
 MTX_B="${HOME}/sim_data/${NAME}/${NAME}_b.mtx"
 MTX_X="${HOME}/sim_data/${NAME}/${NAME}_x.mtx"
 
-DIR="${HOME}/git/SpMTXReader"
+DIR="${HOME}/git/HYPRE/iterative_solvers"
 
 #env
 
@@ -76,8 +76,9 @@ echo "NThreads: ${NTH}"
 echo "CPU INFO:"
 lscpu |grep -e "Model name"
 lscpu |grep -e "Socket(s):" -e "Core(s) per socket" -e "NUMA node(s):"
+POWER="SOLVER_${SOLVER}_${NAME}.pow"
 
-CMD="${DIR}/solver -solver ${SOLVER}  -log ${LOG}  -precond_log ${P_LOG}  -niter 1  -maxit 10000  -tol 1e-16  -emtx ${E_MTX} -mtx ${MTX}"
+CMD="${DIR}/solver -solver ${SOLVER}  -log ${LOG}  -precond_log ${P_LOG}  -niter 1  -maxit 1000  -tol 1e-16  -emtx ${E_MTX} -mtx ${MTX} -p ${POWER} -id ${VE}"
 
 if [[ $PADDING -eq 1 ]]; then
        CMD+="  -padding"
