@@ -1,15 +1,16 @@
 #!/bin/bash
 
-DATA="Bump_2911 Cube_Coup_dt0 Flan_1565 ML_Geer dielFilterV3real Serena Geo_1438 af_shell10 ldoor Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 bundle_adj CoupCons3D pwtk PR02R bbmat hvdc2 scircuit windtunnel_evap3d hvdc1 StocF-1465 fullb fcondp2 HV15R"
+#DATA="Bump_2911 Cube_Coup_dt0 Flan_1565 ML_Geer dielFilterV3real Serena Geo_1438 af_shell10 ldoor Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 bundle_adj CoupCons3D pwtk PR02R bbmat hvdc2 scircuit windtunnel_evap3d hvdc1 StocF-1465 fullb fcondp2 HV15R"
 # DATA="scircuit ldoor af_shell10 bundle_adj HV15R  Bump_2911 Serena Geo_1438 Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 StocF-1465 CoupCons3D fullb pwtk fcondp2 PR02R  bbmat hvdc2 hvdc1 windtunnel_evap3d "
-DATA="Flan_1565"
+#DATA="Bump_2911 Cube_Coup_dt0 Flan_1565 ML_Geer dielFilterV3real Serena Geo_1438 af_shell10 ldoor Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 bundle_adj CoupCons3D scircuit windtunnel_evap3d hvdc1"
+DATA="dielFilterV3real Serena Geo_1438 af_shell10 ldoor StocF-1465 Emilia_923 RM07R PFlow_742 ML_Laplace Fault_639 bundle_adj CoupCons3D pwtk PR02R bbmat hvdc2 scircuit windtunnel_evap3d hvdc1 StocF-1465 fullb fcondp2"
 
 DARR=($DATA)
 LENGTH="${#DARR[@]}"
 
 
 # SOL="6 50 40 12 60 7 61"
-SOL="7 61"
+SOL="12 60 1 7 12 8 61 62 63"
 for solv in ${SOL}; do
     i=0
     while [[ $i -le $LENGTH ]]
@@ -25,26 +26,28 @@ for solv in ${SOL}; do
         # end=$((diff < end ? diff : 7))
         # echo $end
         cp job_fuchu_muli "bench_tmp_$v"
-        for ii in $( seq 0 $end ); do
+	ii=0
+       # for ii in $( seq 0 $end ); do
     
             ds="${DARR[$((ii+i))]}"
             if [ ! -z "$ds" ]
             then
             line="# VE=0 NAME=$ds"
-            nline="VE=$ii NAME=$ds"
+            nline=" VE=0 NAME=$ds"
+            #nline="VE=$ii NAME=$ds"
             sed -i -e "s/$line/$nline/g" "bench_tmp_$v"
             fi
-        done
+       # done
         sed -i "s/SOLVER=.*/SOLVER=${solv}/g" "bench_tmp_$v"
         JOBS=`/opt/nec/nqsv/bin/qstat -Ps|grep essem|wc -l`
-        while [ $JOBS -ge 2 ]
+        while [ $JOBS -ge 4 ]
         do
             sleep 30
             JOBS=`/opt/nec/nqsv/bin/qstat -Ps|grep essem|wc -l`
         done
         /opt/nec/nqsv/bin/qsub "bench_tmp_$v"
         rm "bench_tmp_$v"
-        ((i = i + 8))
+        ((i = i + 1))
     done
 done
 

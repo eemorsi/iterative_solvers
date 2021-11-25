@@ -43,7 +43,7 @@ function run_one_ve()
   local P_LOG=0
   local PADDING=0
   local NP=1
-  local NTH=$(expr 8 / $NP)
+  local NTH=8
 
   local VE=$1
   local NAME=$2
@@ -58,7 +58,7 @@ function run_one_ve()
   local MTX="${HOME}/sim_data/${NAME}/${NAME}.mtx"
   local MTX_B="${HOME}/sim_data/${NAME}/${NAME}_b.mtx"
   local MTX_X="${HOME}/sim_data/${NAME}/${NAME}_x.mtx"
-  local POWER="${queue}_${NAME}_sol_${SOLVER}_VE_${VE}.pow"
+  local POWER="${queue}_${NAME}_sol_${SOLVER}.pow"
   local DIR="/mnt/scatefs_necd/essem/Benchmarks/HYPRE/SpMTXReader"
   
   #env
@@ -72,7 +72,7 @@ function run_one_ve()
   lscpu |grep -e "Model name" >> ${out} 
   lscpu |grep -e "Socket(s):" -e "Core(s) per socket" -e "NUMA node(s):" >> ${out} 
   
-  local CMD="${DIR}/solver -solver ${SOLVER}  -log ${LOG}  -precond_log ${P_LOG}  -niter 1  -maxit 10000  -tol 1e-16  -emtx ${E_MTX} -mtx ${MTX} -p ${POWER} -id ${VE}"
+  local CMD="${DIR}/solver -solver ${SOLVER}  -log ${LOG}  -precond_log ${P_LOG}  -niter 1  -maxit 1000  -tol 1e-16  -emtx ${E_MTX} -mtx ${MTX} -p ${POWER} -id ${VE}"
   
   if [[ $PADDING -eq 1 ]]; then
          CMD+="  -padding"
