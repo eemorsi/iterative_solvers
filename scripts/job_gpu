@@ -10,9 +10,9 @@
 #
 #SBATCH --partition=gpu
 #
-#SBATCH -w gpu003
+###SBATCH -w gpu003
 #
-
+#SBATCH --constraint=skx6240L&mhz-2600
 
 #source $HOME/nec_hpc_tools/env/mpi/hpcx-2.7.0/linux-x64-intel2018.3/env.sh
 nvhome=/opt/bm/nvidia/hpc_sdk
@@ -49,7 +49,7 @@ export LD_LIBRARY_PATH=${HOME}/HYPRE/build_gpu/lib:${LD_LIBRARY_PATH}
 export PATH=/usr/local/cuda/cuda-11.2/bin:$PATH
 
 
-SOLVER=7
+SOLVER=12
 
 DEBUG=0
 E_MTX=1
@@ -57,8 +57,6 @@ E_MTX=1
 LOG=0
 P_LOG=0
 PADDING=0
-NP=1
-NTH=$(expr 36 / $NP)
 
 # NAME=662_bus RHS=0 X=0 
 # NAME=windtunnel_evap2d RHS=1 X=0  #rhs
@@ -104,7 +102,7 @@ MTX_X="${HOME}/HYPRE/sim_data/${NAME}/${NAME}_x.mtx"
 
 POWER="SOLVER_${SOLVER}_${NAME}.pow"
 
-DIR="${HOME}/HYPRE/SpMTXReader"
+DIR="${HOME}/HYPRE/iterative_solvers"
 
 #env
 
@@ -117,7 +115,7 @@ echo "CPU INFO:"
 lscpu |grep -e "Model name"
 lscpu |grep -e "Socket(s):" -e "Core(s) per socket" -e "NUMA node(s):"
 
-CMD="${DIR}/solver_gpu -solver ${SOLVER}  -log ${LOG}  -precond_log ${P_LOG}  -niter 1  -maxit 10000  -tol 1e-16  -emtx ${E_MTX} -mtx ${MTX} -p ${POWER} -id 0"
+CMD="${DIR}/solver_gpu -solver ${SOLVER}  -log ${LOG}  -precond_log ${P_LOG}  -niter 1  -maxit 1000  -tol 1e-16  -mtx ${MTX} -p ${POWER} -id 0"
 
 if [[ $PADDING -eq 1 ]]; then
        CMD+="  -padding"
@@ -133,7 +131,8 @@ fi
 #export KMP_AFFINITY=verbose,compact
 
 export KMP_AFFINITY=granularity=fine,compact
-export OMP_NUM_THREADS=${NTH}
+export OMP_NUM_THREADS=36
+export NP=1
 mpirun --mca btl '^openib' -np ${NP}  ${CMD}
 
 exit 0

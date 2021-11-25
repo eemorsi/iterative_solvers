@@ -95,6 +95,6 @@ fi
 
 export KMP_AFFINITY=granularity=fine,compact
 export OMP_NUM_THREADS=${NTH}
-mpirun -ve ${VE} -np ${NP} ${CMD}
+mpirun -ve ${VE} ${CMD}
 
 exit 0
